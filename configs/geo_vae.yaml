@@ -1,0 +1,42 @@
+pipeline: train_geo_vae
+seed: 2026
+device: cuda:0
+
+data_config:
+  pdb_data_dir: resources/pdbs
+  train_data_path: resources/gold_train.csv
+  valid_data_path: resources/gold_valid.csv
+  test_data_path: resources/gold_test.csv
+  llm_embedding_dir: resources/rnafm_embeddings
+  graph_featurizer:
+    num_posenc: 16
+    num_rbf: 16
+    knn_num: 10
+
+model_config:
+  name: geo_vae
+  representation_mode: so2    # 不同模式做torsion & sequence的融合， so2 / concat / sequence_only
+  vocab_size: 4
+  d_model: 256
+  num_head: 4
+  num_layers: 4
+  latent_dim: 64
+  llm_embedding_dim: 640
+  dropout: 0.1
+  templates_path: resources/templates.pt
+
+train_config:
+  batch_size: 1
+  epochs: 100
+  lr: 0.0005
+  weight_decay: 0.0001
+  clip_grad: 1.0
+  gradient_accumulate_every: 16
+  output_dir: results/wo_fm_encoder_decoder/
+  ckpt_path:
+  weights:
+    w_seq: 1.0
+    w_angle: 5.0
+    w_coord: 10.0
+    w_repa: 1.0
+    w_kl: 0.1

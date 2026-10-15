@@ -1,0 +1,92 @@
+pipeline: sample_latent_diffusion # 分成 train_latent_diffusion 和 sample_latent_diffusion 两个 pipeline
+seed: 2026
+device: cuda:0
+
+data_config:
+  pdb_data_dir: resources/pdbs
+  train_data_path: resources/gold_train.csv
+  valid_data_path: resources/gold_valid.csv
+  test_data_path: resources/gold_test.csv
+  llm_embedding_dir: resources/rnafm_embeddings
+  graph_featurizer:
+    num_posenc: 16
+    num_rbf: 16
+    knn_num: 10
+
+vae_config:
+  ckpt_path: results/encoder_decoder/geo_vae/latent_dim_8/model_separate_epoch_78.pt # replace path with your own geo_vae ckpt
+  model_config:
+    name: geo_vae
+    representation_mode: so2     # 不同模式做torsion & sequence的融合， so2 / concat / sequence_only
+    vocab_size: 4
+    d_model: 256
+    num_head: 4
+    num_layers: 4
+    latent_dim: 8
+    llm_embedding_dim: 640
+    dropout: 0.1
+    templates_path: resources/templates.pt
+
+model_config:
+  # GVP Encoder (处理骨架条件)
+  # Input: extra_x (15 dim) + node_v (3 dim)
+  node_in_dim: [15, 4]
+  node_h_dim: [128, 16]
+  # Edge: edge_attr (32 dim) + edge_v (1 dim)
+  edge_in_dim: [32, 1]
+  edge_h_dim: [32, 1]
+  num_layers: 4
+  drop_rate: 0.1
+  dihedral_angle: False # extra_x 已包含
+
+  # Latent (Transformer 输入)
+  #latent_dim: 4
+  latent_dim: 8
+  #latent_dim: 64
+
+  # DiT (Denoising Transformer)
+  num_trans_layer: 12
+  trans:
+    encoder_embed_dim: 128 # 必须等于 node_h_dim[0]
+    encoder_attention_heads: 4
+    encoder_ffn_embed_dim: 512
+    dropout: 0.1
+    attention_dropout: 0.1
+
+train_config:
+  batch_size: 32
+  epochs: 100
+  lr: 0.0001
+  wd: 0.0001
+  clip_grad: 1.0
+  gradient_accumulate_every: 1
+  ckpt_path:
+  # 噪声调度
+  latent_transition_config:
+    num_steps: 100
+
+  loss_config:
+    loss_latent:
+      weight: 1.0
+    loss_seq:
+      weight: 0.0
+    loss_coord:
+      weight: 0.0
+
+  # 验证设置
+  val_interval: 1
+  val_num_steps: 100 # DDIM 加速采样
+  sampler: true  # sampler setting for train batch_size > 1
+  sample_mode: time_batch
+  sample_num: 8        # 一个backbone在抽样的时候抽的数目
+  max_squared_res: 1500000
+
+sample_config:
+  batch_size: 1     #每个结构采样多少条序列
+  ckpt_path: results/latent_diffusion/wo_encoder_reparameter/latent_dim_8/model_separate_epoch_99.pt # replace sampling ckpt with your own ckpt
+  output_dir: results/latent_diffusion/wo_encoder_reparameter/latent_dim_8
+  num_steps: 100
+
+  guidance:
+    w_secondary_structure: 1.0
+    w_clash: 0.1
