@@ -108,6 +108,10 @@ Sampling implements the **dual guidance** in Section 4.4: secondary-structure pa
 
 Generated RNA sequences and evaluation metrics are written to a CSV under `sample_config.output_dir`. Reconstructed PDB structures are saved in the corresponding `*_sampled_pdbs/` directory.
 
+## Connection
+
+If you have any question or want further communications, please email to sqwd0616@gmail.com.
+
 ## Citation
 
 If you find GOLD or this code useful in your research, please consider citing our paper:
